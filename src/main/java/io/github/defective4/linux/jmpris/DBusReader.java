@@ -2,6 +2,7 @@ package io.github.defective4.linux.jmpris;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -12,17 +13,33 @@ import io.github.defective4.linux.jmpris.model.DBusNumber;
 import io.github.defective4.linux.jmpris.model.DBusObject;
 import io.github.defective4.linux.jmpris.model.DBusString;
 
-public class DBusReader {
-    private DBusReader() {}
+public class DBusReader extends BufferedReader {
 
-    public static DBusObject read(BufferedReader reader) throws IOException {
+    private boolean signalReceived = false;
+
+    public DBusReader(Reader in) {
+        super(in);
+    }
+
+    public DBusObject readObject() throws IOException {
         Stack<List<Object>> arrays = new Stack<>();
         List<Object> root = new ArrayList<>();
         root.add(false);
         while (true) {
-            String line = reader.readLine();
+            String line = readLine();
             if (line == null) return null;
             line = line.trim();
+
+            if (line.startsWith("signal")) {
+                if(signalReceived) {
+                    return map(root);
+                }
+                signalReceived = true;
+                continue;
+            }
+            if (!signalReceived) {
+                continue;
+            }
 
             if (line.startsWith("variant")) {
                 line = line.substring("variant".length()).trim();
@@ -67,7 +84,10 @@ public class DBusReader {
                 else
                     root.add(array);
 
-                if (arrays.isEmpty()) return map(root);
+                if (arrays.isEmpty()) {
+                    signalReceived = false;
+                    return map(root);
+                }
             }
         }
 
