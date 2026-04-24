@@ -1,4 +1,4 @@
-package io.github.defective4.linux.jmpris;
+package io.github.defective4.linux.jmpris.dbus;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,7 +21,7 @@ public class DBusReader extends BufferedReader {
         super(in);
     }
 
-    public DBusObject readObject() throws IOException {
+    public DBusArray readObject() throws IOException {
         Stack<List<Object>> arrays = new Stack<>();
         List<Object> root = new ArrayList<>();
         root.add(false);
@@ -31,8 +31,8 @@ public class DBusReader extends BufferedReader {
             line = line.trim();
 
             if (line.startsWith("signal")) {
-                if(signalReceived) {
-                    return map(root);
+                if (signalReceived) {
+                    return mapToArray(root);
                 }
                 signalReceived = true;
                 continue;
@@ -86,7 +86,7 @@ public class DBusReader extends BufferedReader {
 
                 if (arrays.isEmpty()) {
                     signalReceived = false;
-                    return map(root);
+                    return mapToArray(root);
                 }
             }
         }
@@ -120,5 +120,10 @@ public class DBusReader extends BufferedReader {
         if (obj instanceof List<?> ls) return map((List<Object>) ls);
         if (obj instanceof Number num) return new DBusNumber(num);
         return new DBusArray();
+    }
+
+    private static DBusArray mapToArray(List<Object> list) {
+        DBusObject obj = map(list);
+        return obj == null ? null : (DBusArray) obj;
     }
 }
